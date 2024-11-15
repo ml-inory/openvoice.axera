@@ -1,0 +1,54 @@
+{
+    "model_type": "ONNX",
+    "npu_mode": "NPU3",
+    "quant": {
+      "input_configs": [
+        {
+          "tensor_name": "z",
+          "calibration_dataset": "./calibration_dataset/z.tar.gz",
+          "calibration_size": -1,
+          "calibration_format": "Numpy"
+        },
+        {
+          "tensor_name": "g_src",
+          "calibration_dataset": "./calibration_dataset/g_src.tar.gz",
+          "calibration_size": -1,
+          "calibration_format": "Numpy"
+        },
+        {
+            "tensor_name": "g_dst",
+            "calibration_dataset": "./calibration_dataset/g_dst.tar.gz",
+            "calibration_size": -1,
+            "calibration_format": "Numpy"
+        }
+      ],
+      
+      "layer_configs": [
+      {
+          "start_tensor_names": ["DEFAULT"], 
+          "end_tensor_names": ["DEFAULT"], 
+          "data_type": "U16"
+        } 
+      ],
+      "precision_analysis": true,
+      "precision_analysis_method":"EndToEnd"
+    },
+    "input_processors": [
+      {
+        "tensor_name": "z",
+        "src_dtype": "FP32"
+      },
+      {
+        "tensor_name": "g_src",
+        "src_dtype": "FP32"
+      },
+      {
+        "tensor_name": "g_dst",
+        "src_dtype": "FP32"
+      }
+    ],
+    "compiler": {
+      "check": 2
+    }
+  }
+  
