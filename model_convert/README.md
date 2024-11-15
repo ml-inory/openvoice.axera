@@ -7,5 +7,8 @@ conda create -n openvoice python=3.9
 conda activate openvoice
 pip install -r requirements.txt
 
+pip install git+https://github.com/myshell-ai/MeloTTS.git
+python -m unidic download
+
 python export_onnx.py
 ```
