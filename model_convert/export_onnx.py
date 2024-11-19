@@ -59,7 +59,7 @@ with torch.no_grad():
                     do_constant_folding=True,  # whether to execute constant folding for optimization
                     dynamic_axes=dynamic_axes,
                     input_names = input_names, # the model's input names
-                    output_names = ['z'], # the model's output names
+                    output_names = ['z', 'y_mask'], # the model's output names
                     )
     sim_model,_ = simplify(model_name)
     onnx.save(sim_model, model_name)
@@ -70,18 +70,24 @@ with torch.no_grad():
     model.forward = model.dec_forward
     dec_len = 128
     z = torch.rand(1, 192, dec_len)
+    y_mask = torch.ones(1, 1, dec_len)
     g_src = torch.rand(1, 256, 1)
     g_dst = torch.rand(1, 256, 1)
     inputs = (
-        z, g_src, g_dst
+        z, y_mask, g_src, g_dst
     )
-    input_names = ['z', 'g_src', 'g_dst']
+    dynamic_axes = {
+        "z": {2: "y_length"},
+        "y_mask": {2: "y_length"}
+    }
+    input_names = ['z', 'y_mask', 'g_src', 'g_dst']
     torch.onnx.export(model,               # model being run
                     inputs,                    # model input (or a tuple for multiple inputs)
                     model_name,              # where to save the model (can be a file or file-like object)
                     export_params=True,        # store the trained parameter weights inside the model file
                     opset_version=16,          # the ONNX version to export the model to
                     do_constant_folding=True,  # whether to execute constant folding for optimization
+                    dynamic_axes=dynamic_axes,
                     input_names = input_names, # the model's input names
                     output_names = ['audio'], # the model's output names
                     )
@@ -101,12 +107,18 @@ with torch.no_grad():
     tf_g_src = tarfile.open(f"{dataset_path}/g_src.tar.gz", "w:gz")
     tf_g_dst = tarfile.open(f"{dataset_path}/g_dst.tar.gz", "w:gz")
 
-    z = model.enc_forward(spec)
+    z, y_mask = model.enc_forward(spec)
     for i in tqdm.trange(0, z.size(-1) // dec_len):
         z_slice = z[..., i * dec_len : (i + 1) * dec_len]
+        y_mask_slice = y_mask[..., i * dec_len : (i + 1) * dec_len]
         if z_slice.size(-1) < dec_len:
             z_slice = torch.nn.functional.pad(
                 z_slice,
+                (0, dec_len - z_slice.size(-1)),
+                mode="constant",
+            )
+            y_mask_slice = torch.nn.functional.pad(
+                y_mask_slice,
                 (0, dec_len - z_slice.size(-1)),
                 mode="constant",
             )

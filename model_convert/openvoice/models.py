@@ -502,7 +502,7 @@ class SynthesizerTrn(nn.Module):
     def enc_forward(self, y):
         y_lengths = torch.LongTensor([y.size(-1)])
         z, m_q, logs_q, y_mask = self.enc_q(y, y_lengths, g=torch.zeros(1, 256, 1, dtype=torch.float32), tau=1.0)
-        return z
+        return z, y_mask
     
     def flow_forward(self, z, g_src):
         dec_len = z.size(-1)
@@ -512,12 +512,12 @@ class SynthesizerTrn(nn.Module):
         # o_hat.size() = (1, 1, 256 * dec_len)
         return z_p
     
-    def dec_forward(self, z, g_src, g_tgt):
-        dec_len = z.size(-1)
-        y_mask = torch.ones(1, 1, dec_len)
+    def dec_forward(self, z, y_mask, g_src, g_tgt):
+        # dec_len = z.size(-1)
+        # y_mask = torch.ones(1, 1, dec_len)
         z_p = self.flow(z, y_mask, g=g_src)
         z_hat = self.flow(z_p, y_mask, g=g_tgt, reverse=True)
-        o_hat = self.dec(z_hat * y_mask, g=None)
+        o_hat = self.dec(z_hat * y_mask, g=torch.zeros_like(g_tgt))
         # print(f"o_hat.size() = {o_hat.size()}")
         # o_hat.size() = (1, 1, 256 * dec_len)
         return o_hat

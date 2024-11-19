@@ -7,7 +7,7 @@ from openvoice import se_extractor
 from openvoice.api import ToneColorConverter
 
 ckpt_converter = 'checkpoints_v2/converter'
-device = "cuda:0" if torch.cuda.is_available() else "cpu"
+device = "cpu"
 output_dir = 'outputs_v2'
 
 tone_color_converter = ToneColorConverter(f'{ckpt_converter}/config.json', device=device)
@@ -48,6 +48,9 @@ for language, text in texts.items():
         source_se = torch.load(f'checkpoints_v2/base_speakers/ses/{speaker_key}.pth', map_location=device)
         model.tts_to_file(text, speaker_id, src_path, speed=speed)
         save_path = f'{output_dir}/output_v2_{speaker_key}.wav'
+
+        source_se.numpy().tofile("g_src.bin")
+        target_se.numpy().tofile("g_dst.bin")
 
         # Run the tone color converter
         encode_message = "@MyShell"
