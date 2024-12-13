@@ -268,12 +268,14 @@ class Generator(torch.nn.Module):
 
         if gin_channels != 0:
             self.cond = nn.Conv1d(gin_channels, upsample_initial_channel, 1)
-            self.conv_pre.bias.data += self.cond.bias.data
+            # self.conv_pre.bias.data += self.cond.bias.data
+            # print(f"upsample_initial_channel = {upsample_initial_channel}")
 
     def forward(self, x, g=None):
         x = self.conv_pre(x)
-        if g is not None:
-            x = x + self.cond(g)
+        # if g is not None:
+        #     x = x + self.cond(g)
+        #     print((self.cond(g) == self.cond.bias.data).sum())
 
         for i in range(self.num_upsamples):
             x = F.leaky_relu(x, modules.LRELU_SLOPE)

@@ -30,7 +30,9 @@ model = SynthesizerTrn(
 model.eval()
 checkpoint_dict = torch.load(ckpt_path, map_location=torch.device(device))
 model.load_state_dict(checkpoint_dict['model'], strict=False)
-
+# Hack decoder
+# self.conv_pre.bias.data += self.cond.bias.data
+model.dec.conv_pre.bias.data += model.dec.cond.bias.data
 
 # load audio
 audio, sample_rate = librosa.load(audio_src_path, sr=hps.data.sampling_rate)
