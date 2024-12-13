@@ -11,4 +11,6 @@ pip install git+https://github.com/myshell-ai/MeloTTS.git
 python -m unidic download
 
 python export_onnx.py
+
+pulsar2 build --input decoder.onnx --config config_decoder_u16.json --output_dir decoder --output_name decoder.axmodel --target_hardware AX650 --compiler.check 0
 ```
