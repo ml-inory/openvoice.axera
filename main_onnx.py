@@ -39,6 +39,7 @@ def main():
     filter_length = 1024
     hop_length = 256
     win_length = 1024
+    tau = 0.0
 
     print(f"Input audio: {input_audio}")
     print(f"Output audio: {output_audio}")
@@ -47,6 +48,7 @@ def main():
 
     print("Loading audio...")
     audio, origin_sr = librosa.load(input_audio, sr=sampling_rate)
+    print(f"audio.shape = {audio.shape}")
 
     print("Loading model...")
     start = time.time()
@@ -62,13 +64,18 @@ def main():
                             sampling_rate, hop_length, win_length,
                             center=False)
     spec = spec.numpy()
+    np.save("spec.npy", spec)
+    print(f"spec.size = {spec.shape}")
     print(f"Preprocess take {(time.time() - start) * 1000}ms")
 
     print("Running model...")
     start = time.time()
-    outputs = sess_enc.run(None, {"y": spec})
+    outputs = sess_enc.run(None, {"y": spec, "tau": np.array([tau], dtype=np.float64)})
     z, y_mask = outputs
     print(f"Run encoder take {(time.time() - start) * 1000}ms")
+
+    np.save("z.npy", z)
+    np.save("y_mask.npy", y_mask)
     
     # dec_len = 128
     # slice_num = int(np.ceil(z.shape[-1] / dec_len))

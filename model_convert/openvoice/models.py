@@ -493,15 +493,24 @@ class SynthesizerTrn(nn.Module):
     def voice_conversion(self, y, y_lengths, sid_src, sid_tgt, tau=1.0):
         g_src = sid_src
         g_tgt = sid_tgt
+        # print(f"zero_g: {self.zero_g}")
+        # print(f"g_src.size = {g_src.size()}")
         z, m_q, logs_q, y_mask = self.enc_q(y, y_lengths, g=g_src if not self.zero_g else torch.zeros_like(g_src), tau=tau)
+
+        # import numpy as np
+        # np.save("z.npy", z.numpy())
+        # np.save("y_mask.npy", y_mask.numpy())
+
         z_p = self.flow(z, y_mask, g=g_src)
+        # np.save("z_p.npy", z_p.numpy())
         z_hat = self.flow(z_p, y_mask, g=g_tgt, reverse=True)
+        # np.save("z_hat.npy", z_hat.numpy())
         o_hat = self.dec(z_hat * y_mask, g=g_tgt if not self.zero_g else torch.zeros_like(g_tgt))
         return o_hat, y_mask, (z, z_p, z_hat)
     
-    def enc_forward(self, y):
+    def enc_forward(self, y, tau):
         y_lengths = torch.LongTensor([y.size(-1)])
-        z, m_q, logs_q, y_mask = self.enc_q(y, y_lengths, g=torch.zeros(1, 256, 1, dtype=torch.float32), tau=1.0)
+        z, m_q, logs_q, y_mask = self.enc_q(y, y_lengths, g=torch.zeros(1, 256, 1, dtype=torch.float32), tau=tau)
         return z, y_mask
     
     def flow_forward(self, z, g_src):

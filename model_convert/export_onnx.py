@@ -16,7 +16,7 @@ device = "cpu"
 ckpt_converter = 'checkpoints_v2/converter'
 config_path = f'{ckpt_converter}/config.json'
 ckpt_path = f'{ckpt_converter}/checkpoint.pth'
-audio_src_path = "demo_speaker0.mp3"
+audio_src_path = "./resources/demo_speaker0.mp3"
 dataset_path = "calibration_dataset"
 
 hps = utils.get_hparams_from_file(config_path)
@@ -28,6 +28,9 @@ model = SynthesizerTrn(
     **hps.model,
 ).to(device)
 model.eval()
+checkpoint_dict = torch.load(ckpt_path, map_location=torch.device(device))
+model.load_state_dict(checkpoint_dict['model'], strict=False)
+
 
 # load audio
 audio, sample_rate = librosa.load(audio_src_path, sr=hps.data.sampling_rate)
@@ -40,14 +43,15 @@ with torch.no_grad():
     spec = spectrogram_torch(y, hps.data.filter_length,
                             hps.data.sampling_rate, hps.data.hop_length, hps.data.win_length,
                             center=False).to(device)
+    tau = float(0.3)                           
 
     # Export encoder
     model_name = "encoder.onnx"
     model.forward = model.enc_forward
     inputs = (
-        spec
+        spec, tau
     )
-    input_names = ['y']
+    input_names = ['y', 'tau']
     dynamic_axes = {
         "y": {2: "y_length"}
     }
@@ -107,7 +111,7 @@ with torch.no_grad():
     tf_g_src = tarfile.open(f"{dataset_path}/g_src.tar.gz", "w:gz")
     tf_g_dst = tarfile.open(f"{dataset_path}/g_dst.tar.gz", "w:gz")
 
-    z, y_mask = model.enc_forward(spec)
+    z, y_mask = model.enc_forward(spec, tau)
     for i in tqdm.trange(0, z.size(-1) // dec_len):
         z_slice = z[..., i * dec_len : (i + 1) * dec_len]
         y_mask_slice = y_mask[..., i * dec_len : (i + 1) * dec_len]

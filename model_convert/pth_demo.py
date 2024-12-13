@@ -46,7 +46,7 @@ for language, text in texts.items():
         speaker_key = speaker_key.lower().replace('_', '-')
         
         source_se = torch.load(f'checkpoints_v2/base_speakers/ses/{speaker_key}.pth', map_location=device)
-        model.tts_to_file(text, speaker_id, src_path, speed=speed)
+        # model.tts_to_file(text, speaker_id, src_path, speed=speed)
         save_path = f'{output_dir}/output_v2_{speaker_key}.wav'
 
         source_se.numpy().tofile("g_src.bin")
@@ -59,4 +59,5 @@ for language, text in texts.items():
             src_se=source_se, 
             tgt_se=target_se, 
             output_path=save_path,
+            tau=0.0,
             message=encode_message)

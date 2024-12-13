@@ -143,13 +143,21 @@ class ToneColorConverter(OpenVoiceBaseClass):
         # load audio
         audio, sample_rate = librosa.load(audio_src_path, sr=hps.data.sampling_rate)
         audio = torch.tensor(audio).float()
+
+        # print(f"sampling_rate: {hps.data.sampling_rate}")
+        # print(f"filter_length: {hps.data.filter_length}")
+        # print(f"hop_length: {hps.data.hop_length}")
+        # print(f"win_length: {hps.data.win_length}")
         
         with torch.no_grad():
             y = torch.FloatTensor(audio).to(self.device)
             y = y.unsqueeze(0)
+            # print(f"y.size = {y.size()}")
             spec = spectrogram_torch(y, hps.data.filter_length,
                                     hps.data.sampling_rate, hps.data.hop_length, hps.data.win_length,
                                     center=False).to(self.device)
+            # print(f"spec.size(-1) = {spec.size(-1)}")   
+            # np.save("spec.npy", spec.numpy())
             spec_lengths = torch.LongTensor([spec.size(-1)]).to(self.device)
             audio = self.model.voice_conversion(spec, spec_lengths, sid_src=src_se, sid_tgt=tgt_se, tau=tau)[0][
                         0, 0].data.cpu().float().numpy()
