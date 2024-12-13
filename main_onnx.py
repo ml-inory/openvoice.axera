@@ -48,7 +48,7 @@ def main():
 
     print("Loading audio...")
     audio, origin_sr = librosa.load(input_audio, sr=sampling_rate)
-    print(f"audio.shape = {audio.shape}")
+    # print(f"audio.shape = {audio.shape}")
 
     print("Loading model...")
     start = time.time()
