@@ -64,8 +64,8 @@ def main():
                             sampling_rate, hop_length, win_length,
                             center=False)
     spec = spec.numpy()
-    np.save("spec.npy", spec)
-    print(f"spec.size = {spec.shape}")
+    # np.save("spec.npy", spec)
+    # print(f"spec.size = {spec.shape}")
     print(f"Preprocess take {(time.time() - start) * 1000}ms")
 
     print("Running model...")
@@ -74,31 +74,34 @@ def main():
     z, y_mask = outputs
     print(f"Run encoder take {(time.time() - start) * 1000}ms")
 
-    np.save("z.npy", z)
-    np.save("y_mask.npy", y_mask)
+    # np.save("z.npy", z)
+    # np.save("y_mask.npy", y_mask)
     
-    # dec_len = 128
-    # slice_num = int(np.ceil(z.shape[-1] / dec_len))
-    # audio_list = []
-    # for i in range(slice_num):
-    #     z_slice = z[..., i * dec_len : (i + 1) * dec_len]
-    #     audio_len = z_slice.shape[-1] * 256
-    #     if z_slice.shape[-1] < dec_len:
-    #         z_slice = np.concatenate((z_slice, np.zeros((*z_slice.shape[:-1], dec_len - z_slice.shape[-1]), dtype=np.float32)), axis=-1)
+    dec_len = 128
+    slice_num = int(np.ceil(z.shape[-1] / dec_len))
+    audio_list = []
+    for i in range(slice_num):
+        z_slice = z[..., i * dec_len : (i + 1) * dec_len]
+        y_mask_slice = y_mask[..., i * dec_len : (i + 1) * dec_len]
+        audio_len = z_slice.shape[-1] * 256
+        if z_slice.shape[-1] < dec_len:
+            z_slice = np.concatenate((z_slice, np.zeros((*z_slice.shape[:-1], dec_len - z_slice.shape[-1]), dtype=np.float32)), axis=-1)
+            y_mask_slice = np.concatenate((y_mask_slice, np.zeros((*y_mask_slice.shape[:-1], dec_len - y_mask_slice.shape[-1]), dtype=np.float32)), axis=-1)
 
-    #     start = time.time()
-    #     audio = sess_dec.run(None, {"z": z_slice, "g_src": g_src, "g_dst": g_dst})[0]
-    #     audio = audio.flatten()[:audio_len]
-    #     print(f"Run decoder slice {i + 1}/{slice_num} take {(time.time() - start) * 1000}ms")
+        start = time.time()
+        audio = sess_dec.run(None, {"z": z_slice, "y_mask": y_mask_slice, "g_src": g_src, "g_dst": g_dst})[0]
+        
+        audio = audio.flatten()[:audio_len]
+        print(f"Run decoder slice {i + 1}/{slice_num} take {(time.time() - start) * 1000}ms")
 
-    #     audio_list.append(audio)
+        audio_list.append(audio)
 
-    # audio = np.concatenate(audio_list, axis=-1)
+    audio = np.concatenate(audio_list, axis=-1)
 
-    start = time.time()
-    audio = sess_dec.run(None, {"z": z, "y_mask": y_mask, "g_src": g_src, "g_dst": g_dst})[0]
-    audio = audio.flatten()
-    print(f"Run decoder take {(time.time() - start) * 1000}ms")
+    # start = time.time()
+    # audio = sess_dec.run(None, {"z": z, "y_mask": y_mask, "g_src": g_src, "g_dst": g_dst})[0]
+    # audio = audio.flatten()
+    # print(f"Run decoder take {(time.time() - start) * 1000}ms")
 
     sf.write(output_audio, audio, sampling_rate)
     print(f"Save audio to {output_audio}")

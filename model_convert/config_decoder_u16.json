@@ -10,6 +10,12 @@
           "calibration_format": "Numpy"
         },
         {
+          "tensor_name": "y_mask",
+          "calibration_dataset": "./calibration_dataset/y_mask.tar.gz",
+          "calibration_size": -1,
+          "calibration_format": "Numpy"
+        },
+        {
           "tensor_name": "g_src",
           "calibration_dataset": "./calibration_dataset/g_src.tar.gz",
           "calibration_size": -1,
@@ -36,6 +42,10 @@
     "input_processors": [
       {
         "tensor_name": "z",
+        "src_dtype": "FP32"
+      },
+      {
+        "tensor_name": "y_mask",
         "src_dtype": "FP32"
       },
       {

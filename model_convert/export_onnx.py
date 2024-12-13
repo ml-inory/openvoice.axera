@@ -91,7 +91,7 @@ with torch.no_grad():
                     export_params=True,        # store the trained parameter weights inside the model file
                     opset_version=16,          # the ONNX version to export the model to
                     do_constant_folding=True,  # whether to execute constant folding for optimization
-                    dynamic_axes=dynamic_axes,
+                    dynamic_axes=None,
                     input_names = input_names, # the model's input names
                     output_names = ['audio'], # the model's output names
                     )
@@ -102,12 +102,12 @@ with torch.no_grad():
     print("Generating calibration dataset...")
     os.makedirs(dataset_path, exist_ok=True)
     os.makedirs(f"{dataset_path}/z", exist_ok=True)
-    # os.makedirs(f"{dataset_path}/z_p", exist_ok=True)
+    os.makedirs(f"{dataset_path}/y_mask", exist_ok=True)
     os.makedirs(f"{dataset_path}/g_src", exist_ok=True)
     os.makedirs(f"{dataset_path}/g_dst", exist_ok=True)
 
     tf_z = tarfile.open(f"{dataset_path}/z.tar.gz", "w:gz")
-    # tf_zp = tarfile.open(f"{dataset_path}/z_p.tar.gz", "w:gz")
+    tf_y_mask = tarfile.open(f"{dataset_path}/y_mask.tar.gz", "w:gz")
     tf_g_src = tarfile.open(f"{dataset_path}/g_src.tar.gz", "w:gz")
     tf_g_dst = tarfile.open(f"{dataset_path}/g_dst.tar.gz", "w:gz")
 
@@ -132,16 +132,16 @@ with torch.no_grad():
         # z_p = z_p.numpy()
         z_slice = z_slice.numpy()
         np.save(f"{dataset_path}/z/{i}.npy", z_slice)
-        # np.save(f"{dataset_path}/z_p/{i}.npy", z_p)
+        np.save(f"{dataset_path}/y_mask/{i}.npy", y_mask_slice)
         np.save(f"{dataset_path}/g_src/{i}.npy", g_src.numpy())
         np.save(f"{dataset_path}/g_dst/{i}.npy", g_dst.numpy())
         
         tf_z.add(f"{dataset_path}/z/{i}.npy")
-        # tf_zp.add(f"{dataset_path}/z_p/{i}.npy")
+        tf_y_mask.add(f"{dataset_path}/y_mask/{i}.npy")
         tf_g_src.add(f"{dataset_path}/g_src/{i}.npy")
         tf_g_dst.add(f"{dataset_path}/g_dst/{i}.npy")
 
     tf_z.close()
-    # tf_zp.close()
+    tf_y_mask.close()
     tf_g_src.close()
     tf_g_dst.close()
