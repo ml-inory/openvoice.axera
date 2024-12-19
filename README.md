@@ -6,6 +6,30 @@
 
 参考[模型转换文档](model_convert/README.md)
 
+## 安装依赖
+```
+pip3 install -r requirements.txt
+```
+由于默认的安装路径可能空间不足，此时可以使用--prefix参数将依赖安装在其它路径，如：  
+
+```
+pip3 install -r requirements.txt --prefix=/root/site-packages
+```
+
+其中prefix可以替换为其他路径，但需要确保其在PYTHONPATH以及PATH环境变量中。
+环境变量配置示例如下：
+```
+vim /root/.bashrc  
+
+在最后添加
+export PYTHONPATH=$PYTHONPATH:/opt/site-packages/local/lib/python3.10/dist-packages:/root/site-packages/local/lib/python3.10/dist-packages  
+export PATH=$PATH:/opt/site-packages/local/bin:/root/site-packages/local/bin
+
+保存退出编辑后
+source /root/.bashrc
+```
+
+
 ## 运行
 ```
 python3 main.py -i 输入音频 -o 输出音频(默认为output.wav)
