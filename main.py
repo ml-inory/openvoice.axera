@@ -40,7 +40,6 @@ def main():
     filter_length = 1024
     hop_length = 256
     win_length = 1024
-    tau = 0.0
     enc_len = 1024
     dec_len = 128
 
