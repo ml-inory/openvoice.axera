@@ -20,6 +20,14 @@ python export_onnx.py
 
 ## 编译模型
 
+Encoder:  
+```
+pulsar2 build --input encoder.onnx --config config_encoder_u16.json --output_dir encoder --output_name encoder.axmodel --target_hardware AX650 --compiler.check 0
+```
+
+Decoder:  
 ```
 pulsar2 build --input decoder.onnx --config config_decoder_u16.json --output_dir decoder --output_name decoder.axmodel --target_hardware AX650 --compiler.check 0
 ```
+
+转换完成后复制axmodel到models目录下。
