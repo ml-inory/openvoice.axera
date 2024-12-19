@@ -16,7 +16,7 @@ tone_color_converter.load_ckpt(f'{ckpt_converter}/checkpoint.pth')
 os.makedirs(output_dir, exist_ok=True)
 
 
-reference_speaker = 'resources/demo_speaker0.mp3' # This is the voice you want to clone
+reference_speaker = 'resources/example_reference.mp3' # This is the voice you want to clone
 target_se, audio_name = se_extractor.get_se(reference_speaker, tone_color_converter, vad=False)
 
 from melo.api import TTS
@@ -32,7 +32,7 @@ texts = {
 }
 
 
-src_path = f'{output_dir}/tmp.wav'
+src_path = f'../tmp.wav'
 
 # Speed is adjustable
 speed = 1.0
