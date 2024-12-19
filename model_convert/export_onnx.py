@@ -45,27 +45,25 @@ with torch.no_grad():
     spec = spectrogram_torch(y, hps.data.filter_length,
                             hps.data.sampling_rate, hps.data.hop_length, hps.data.win_length,
                             center=False).to(device)
-    tau = float(0.3)                           
+    tau = torch.FloatTensor([0.3])                          
+    # print(f"spec.size = {spec.size()}")
 
     # Export encoder
+    enc_len = 1024
     model_name = "encoder.onnx"
     model.forward = model.enc_forward
     inputs = (
-        spec, tau
+        torch.rand(1, 513, enc_len),
     )
-    input_names = ['y', 'tau']
-    dynamic_axes = {
-        "y": {2: "y_length"}
-    }
+    input_names = ['y',]
     torch.onnx.export(model,               # model being run
                     inputs,                    # model input (or a tuple for multiple inputs)
                     model_name,              # where to save the model (can be a file or file-like object)
-                    export_params=True,        # store the trained parameter weights inside the model file
                     opset_version=16,          # the ONNX version to export the model to
                     do_constant_folding=True,  # whether to execute constant folding for optimization
-                    dynamic_axes=dynamic_axes,
-                    input_names = input_names, # the model's input names
-                    output_names = ['z', 'y_mask'], # the model's output names
+                    dynamic_axes=None,
+                    input_names=input_names, # the model's input names
+                    output_names=['z'], # the model's output names
                     )
     sim_model,_ = simplify(model_name)
     onnx.save(sim_model, model_name)
@@ -80,13 +78,9 @@ with torch.no_grad():
     g_src = torch.rand(1, 256, 1)
     g_dst = torch.rand(1, 256, 1)
     inputs = (
-        z, y_mask, g_src, g_dst
+        z, g_src, g_dst
     )
-    dynamic_axes = {
-        "z": {2: "y_length"},
-        "y_mask": {2: "y_length"}
-    }
-    input_names = ['z', 'y_mask', 'g_src', 'g_dst']
+    input_names = ['z', 'g_src', 'g_dst']
     torch.onnx.export(model,               # model being run
                     inputs,                    # model input (or a tuple for multiple inputs)
                     model_name,              # where to save the model (can be a file or file-like object)
@@ -103,17 +97,29 @@ with torch.no_grad():
 
     print("Generating calibration dataset...")
     os.makedirs(dataset_path, exist_ok=True)
+    os.makedirs(f"{dataset_path}/y", exist_ok=True)
     os.makedirs(f"{dataset_path}/z", exist_ok=True)
-    os.makedirs(f"{dataset_path}/y_mask", exist_ok=True)
     os.makedirs(f"{dataset_path}/g_src", exist_ok=True)
     os.makedirs(f"{dataset_path}/g_dst", exist_ok=True)
 
+    tf_y = tarfile.open(f"{dataset_path}/y.tar.gz", "w:gz")
     tf_z = tarfile.open(f"{dataset_path}/z.tar.gz", "w:gz")
-    tf_y_mask = tarfile.open(f"{dataset_path}/y_mask.tar.gz", "w:gz")
     tf_g_src = tarfile.open(f"{dataset_path}/g_src.tar.gz", "w:gz")
     tf_g_dst = tarfile.open(f"{dataset_path}/g_dst.tar.gz", "w:gz")
 
-    z, y_mask = model.enc_forward(spec, tau)
+    for i in tqdm.trange(0, spec.size(-1) // enc_len):
+        y_slice = spec[..., i * enc_len : (i + 1) * enc_len]
+        if y_slice.size(-1) < enc_len:
+            y_slice = torch.nn.functional.pad(
+                y_slice,
+                (0, enc_len - y_slice.size(-1)),
+                mode="constant",
+            )
+        y_slice = y_slice.numpy()
+        np.save(f"{dataset_path}/y/{i}.npy", y_slice)
+        tf_y.add(f"{dataset_path}/y/{i}.npy")
+
+    z = model.enc_forward(spec)
     for i in tqdm.trange(0, z.size(-1) // dec_len):
         z_slice = z[..., i * dec_len : (i + 1) * dec_len]
         y_mask_slice = y_mask[..., i * dec_len : (i + 1) * dec_len]
@@ -123,27 +129,17 @@ with torch.no_grad():
                 (0, dec_len - z_slice.size(-1)),
                 mode="constant",
             )
-            y_mask_slice = torch.nn.functional.pad(
-                y_mask_slice,
-                (0, dec_len - z_slice.size(-1)),
-                mode="constant",
-            )
 
-        # z_p = model.flow_forward(z_slice, g_src)
-
-        # z_p = z_p.numpy()
         z_slice = z_slice.numpy()
         np.save(f"{dataset_path}/z/{i}.npy", z_slice)
-        np.save(f"{dataset_path}/y_mask/{i}.npy", y_mask_slice)
         np.save(f"{dataset_path}/g_src/{i}.npy", g_src.numpy())
         np.save(f"{dataset_path}/g_dst/{i}.npy", g_dst.numpy())
         
         tf_z.add(f"{dataset_path}/z/{i}.npy")
-        tf_y_mask.add(f"{dataset_path}/y_mask/{i}.npy")
         tf_g_src.add(f"{dataset_path}/g_src/{i}.npy")
         tf_g_dst.add(f"{dataset_path}/g_dst/{i}.npy")
 
+    tf_y.close()
     tf_z.close()
-    tf_y_mask.close()
     tf_g_src.close()
     tf_g_dst.close()

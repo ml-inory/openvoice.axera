@@ -4,16 +4,10 @@
     "quant": {
       "input_configs": [
         {
-          "tensor_name": "z",
-          "calibration_dataset": "./calibration_dataset/z.tar.gz",
+          "tensor_name": "y",
+          "calibration_dataset": "./calibration_dataset/y.tar.gz",
           "calibration_size": -1,
           "calibration_format": "Numpy"
-        },
-        {
-            "tensor_name": "g_src",
-            "calibration_dataset": "./calibration_dataset/g_src.tar.gz",
-            "calibration_size": -1,
-            "calibration_format": "Numpy"
         }
       ],
       
@@ -29,11 +23,7 @@
     },
     "input_processors": [
       {
-        "tensor_name": "z",
-        "src_dtype": "FP32"
-      },
-      {
-        "tensor_name": "g_src",
+        "tensor_name": "y",
         "src_dtype": "FP32"
       }
     ],

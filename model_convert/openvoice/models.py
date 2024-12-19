@@ -213,11 +213,16 @@ class PosteriorEncoder(nn.Module):
         x_mask = torch.unsqueeze(commons.sequence_mask(x_lengths, x.size(2)), 1).to(
             x.dtype
         )
-        x = self.pre(x) * x_mask
-        x = self.enc(x, x_mask, g=g)
-        stats = self.proj(x) * x_mask
+        x = self.pre(x)
+        x = self.enc(x, g=g)
+        stats = self.proj(x)
         m, logs = torch.split(stats, self.out_channels, dim=1)
-        z = (m + torch.randn_like(m) * tau * torch.exp(logs)) * x_mask
+        # z = (m + torch.randn_like(m) * tau * torch.exp(logs)) * x_mask
+        z = m
+        # print(f"z.size = {z.size()}")
+        # print(f"x_mask.size = {x_mask.size()}")
+        # z: (1, 192, x_length)
+        # x_mask: (1, 1, x_length)
         return z, m, logs, x_mask
 
 
@@ -390,13 +395,13 @@ class ResidualCouplingBlock(nn.Module):
             self.flows.append(modules.ResidualCouplingLayer(channels, hidden_channels, kernel_size, dilation_rate, n_layers, gin_channels=gin_channels, mean_only=True))
             self.flows.append(modules.Flip())
 
-    def forward(self, x, x_mask, g=None, reverse=False):
+    def forward(self, x, g=None, reverse=False):
         if not reverse:
             for flow in self.flows:
-                x, _ = flow(x, x_mask, g=g, reverse=reverse)
+                x, _ = flow(x, g=g, reverse=reverse)
         else:
             for flow in reversed(self.flows):
-                x = flow(x, x_mask, g=g, reverse=reverse)
+                x = flow(x, g=g, reverse=reverse)
         return x
 
 class SynthesizerTrn(nn.Module):
@@ -510,25 +515,24 @@ class SynthesizerTrn(nn.Module):
         o_hat = self.dec(z_hat * y_mask, g=g_tgt if not self.zero_g else torch.zeros_like(g_tgt))
         return o_hat, y_mask, (z, z_p, z_hat)
     
-    def enc_forward(self, y, tau):
+    def enc_forward(self, y):
         y_lengths = torch.LongTensor([y.size(-1)])
-        z, m_q, logs_q, y_mask = self.enc_q(y, y_lengths, g=torch.zeros(1, 256, 1, dtype=torch.float32), tau=tau)
-        return z, y_mask
+        # z, m_q, logs_q, y_mask = self.enc_q(y, y_lengths, g=torch.zeros(1, 256, 1, dtype=torch.float32), tau=tau)
+        z, m_q, logs_q, y_mask = self.enc_q(y, y_lengths, g=None)
+        return z
     
     def flow_forward(self, z, g_src):
         dec_len = z.size(-1)
-        y_mask = torch.ones(1, 1, dec_len)
-        z_p = self.flow(z, y_mask, g=g_src)
+        z_p = self.flow(z, g=g_src)
         # print(f"o_hat.size() = {o_hat.size()}")
         # o_hat.size() = (1, 1, 256 * dec_len)
         return z_p
     
-    def dec_forward(self, z, y_mask, g_src, g_tgt):
-        # dec_len = z.size(-1)
-        # y_mask = torch.ones(1, 1, dec_len)
-        z_p = self.flow(z, y_mask, g=g_src)
-        z_hat = self.flow(z_p, y_mask, g=g_tgt, reverse=True)
-        o_hat = self.dec(z_hat * y_mask, g=torch.zeros_like(g_tgt))
+    def dec_forward(self, z, g_src, g_tgt):
+        dec_len = z.size(-1)
+        z_p = self.flow(z, g=g_src)
+        z_hat = self.flow(z_p, g=g_tgt, reverse=True)
+        o_hat = self.dec(z_hat, g=torch.zeros_like(g_tgt))
         # print(f"o_hat.size() = {o_hat.size()}")
         # o_hat.size() = (1, 1, 256 * dec_len)
         return o_hat

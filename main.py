@@ -14,7 +14,7 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input_audio", "-i", type=str, required=True, help="Input audio file(.wav)")
     parser.add_argument("--output_audio", "-o", type=str, required=False, default="./output.wav", help="Seperated wav path")
-    parser.add_argument("--encoder", "-e", type=str, required=False, default="./models/encoder.onnx", help="encoder onnx model")
+    parser.add_argument("--encoder", "-e", type=str, required=False, default="./models/encoder.axmodel", help="encoder axmodel")
     parser.add_argument("--decoder", "-d", type=str, required=False, default="./models/decoder.axmodel", help="decoder axmodel")
     parser.add_argument("--g_src", type=str, required=False, default="./models/g_src.bin", help="source speaker feature")
     parser.add_argument("--g_dst", type=str, required=False, default="./models/g_dst.bin", help="target speaker feature")
@@ -41,6 +41,8 @@ def main():
     hop_length = 256
     win_length = 1024
     tau = 0.0
+    enc_len = 1024
+    dec_len = 128
 
     print(f"Input audio: {input_audio}")
     print(f"Output audio: {output_audio}")
@@ -53,7 +55,7 @@ def main():
 
     print("Loading model...")
     start = time.time()
-    sess_enc = ort.InferenceSession(encoder_path)
+    sess_enc = InferenceSession.load_from_model(encoder_path)
     sess_dec = InferenceSession.load_from_model(decoder_path)
     print(f"Load model take {(time.time() - start) * 1000}ms")
 
@@ -65,39 +67,40 @@ def main():
                             sampling_rate, hop_length, win_length,
                             center=False)
     spec = spec.numpy()
+    real_enc_len = spec.shape[-1]
+    spec = np.concatenate((spec, np.zeros((*spec.shape[:-1], int(np.ceil(spec.shape[-1] / enc_len)) * enc_len - spec.shape[-1]), dtype=np.float32)), axis=-1)
     # np.save("spec.npy", spec)
     # print(f"spec.size = {spec.shape}")
     print(f"Preprocess take {(time.time() - start) * 1000}ms")
 
     print("Running model...")
-    start = time.time()
-    outputs = sess_enc.run(None, {"y": spec, "tau": np.array([tau], dtype=np.float64)})
-    z, y_mask = outputs
-    print(f"Run encoder take {(time.time() - start) * 1000}ms")
+    slice_num = spec.shape[-1] // enc_len
+    z = []
+    for i in range(slice_num):
+        spec_slice = spec[..., i * enc_len : (i + 1) * enc_len]
+        start = time.time()
+        outputs = sess_enc.run(input_feed={"y": spec_slice})
+        z.append(outputs["z"])
+        print(f"Run encoder take {(time.time() - start) * 1000}ms")
+    z = np.concatenate(z, axis=-1)[..., :real_enc_len]
 
     # np.save("z.npy", z)
     # np.save("y_mask.npy", y_mask)
-    
-    dec_len = 128
-    slice_num = int(np.ceil(z.shape[-1] / dec_len))
+    z = np.concatenate((z, np.zeros((*z.shape[:-1], int(np.ceil(z.shape[-1] / dec_len)) * dec_len - z.shape[-1]), dtype=np.float32)), axis=-1)
+    slice_num = z.shape[-1] // dec_len
     audio_list = []
     for i in range(slice_num):
         z_slice = z[..., i * dec_len : (i + 1) * dec_len]
-        y_mask_slice = y_mask[..., i * dec_len : (i + 1) * dec_len]
-        audio_len = z_slice.shape[-1] * 256
-        if z_slice.shape[-1] < dec_len:
-            z_slice = np.concatenate((z_slice, np.zeros((*z_slice.shape[:-1], dec_len - z_slice.shape[-1]), dtype=np.float32)), axis=-1)
-            y_mask_slice = np.concatenate((y_mask_slice, np.zeros((*y_mask_slice.shape[:-1], dec_len - y_mask_slice.shape[-1]), dtype=np.float32)), axis=-1)
-
         start = time.time()
-        audio = sess_dec.run(input_feed={"z": z_slice, "y_mask": y_mask_slice, "g_src": g_src, "g_dst": g_dst})["audio"]
+        audio = sess_dec.run(input_feed={"z": z_slice, "g_src": g_src, "g_dst": g_dst})["audio"]
         
-        audio = audio.flatten()[:audio_len]
+        audio = audio.flatten()
         print(f"Run decoder slice {i + 1}/{slice_num} take {(time.time() - start) * 1000}ms")
 
         audio_list.append(audio)
 
-    audio = np.concatenate(audio_list, axis=-1)
+    audio = np.concatenate(audio_list, axis=-1)[:real_enc_len * 256]
+    # np.save("audio.npy", audio)
 
     sf.write(output_audio, audio, sampling_rate)
     print(f"Save audio to {output_audio}")
