@@ -19,3 +19,5 @@ python3 main.py -i 输入音频 -o 输出音频(默认为output.wav)
 | -d/--decoder | decoder模型路径 | ../models/decoder.axmodel |
 | --g_src | 源人声特征值，bin格式 | ../models/g_src.bin |
 | --g_dst | 目标人声特征值，bin格式 | ../models/g_dst.bin |
+| --enc_len | encoder输入长度 | 1024 |
+| --dec_len | decoder输入长度 | 128 |

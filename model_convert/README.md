@@ -18,6 +18,15 @@ python -m unidic download
 python export_onnx.py
 ```
 
+export_onnx.py运行参数说明:  
+| 参数名称 | 说明 | 默认值 |
+| --- | --- | --- |
+| --encoder | 输出encoder路径 | ./encoder.onnx |
+| --decoder | 输出decoder路径 | ./decoder.onnx |
+| --enc_len | encoder输入长度 | 1024 |
+| --dec_len | decoder输入长度 | 128 |
+
+
 ## 编译模型
 
 Encoder:  

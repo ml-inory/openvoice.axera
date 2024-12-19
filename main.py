@@ -18,6 +18,8 @@ def get_args():
     parser.add_argument("--decoder", "-d", type=str, required=False, default="./models/decoder.axmodel", help="decoder axmodel")
     parser.add_argument("--g_src", type=str, required=False, default="./models/g_src.bin", help="source speaker feature")
     parser.add_argument("--g_dst", type=str, required=False, default="./models/g_dst.bin", help="target speaker feature")
+    parser.add_argument("--enc_len", type=int, required=False, default=1024, help="Encoder input length")
+    parser.add_argument("--dec_len", type=int, required=False, default=128, help="Decoder input length")
     return parser.parse_args()
 
 
@@ -33,6 +35,8 @@ def main():
     output_audio = args.output_audio
     encoder_path = args.encoder
     decoder_path = args.decoder
+    enc_len = args.enc_len
+    dec_len = args.dec_len
     g_src = np.fromfile(args.g_src, dtype=np.float32).reshape((1, 256, 1))
     g_dst = np.fromfile(args.g_dst, dtype=np.float32).reshape((1, 256, 1))
 
@@ -40,8 +44,6 @@ def main():
     filter_length = 1024
     hop_length = 256
     win_length = 1024
-    enc_len = 1024
-    dec_len = 128
 
     print(f"Input audio: {input_audio}")
     print(f"Output audio: {output_audio}")
