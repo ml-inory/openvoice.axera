@@ -35,7 +35,7 @@ texts = {
 src_path = f'../tmp.wav'
 
 # Speed is adjustable
-speed = 1.0
+speed = 0.8
 
 for language, text in texts.items():
     model = TTS(language=language, device=device)
@@ -46,18 +46,17 @@ for language, text in texts.items():
         speaker_key = speaker_key.lower().replace('_', '-')
         
         source_se = torch.load(f'checkpoints_v2/base_speakers/ses/{speaker_key}.pth', map_location=device)
-        # model.tts_to_file(text, speaker_id, src_path, speed=speed)
+        model.tts_to_file(text, speaker_id, src_path, speed=speed)
         save_path = f'{output_dir}/output_v2_{speaker_key}.wav'
 
         source_se.numpy().tofile("g_src.bin")
         target_se.numpy().tofile("g_dst.bin")
 
         # Run the tone color converter
-        encode_message = "@MyShell"
         tone_color_converter.convert(
             audio_src_path=src_path, 
             src_se=source_se, 
             tgt_se=target_se, 
             output_path=save_path,
             tau=0.0,
-            message=encode_message)
+            message=None)

@@ -58,3 +58,5 @@ python extract_se.py -i 目标人声的音频文件 -o 目标人声音色特征�
 python extract_se.py -i resources/example_reference.mp3 -o ref.bin
 ```
 生成的bin文件用于main.py的--g_dst参数
+
+models目录下预置了几种音色，可自行尝试。
