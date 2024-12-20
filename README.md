@@ -45,3 +45,16 @@ python3 main.py -i 输入音频 -o 输出音频(默认为output.wav)
 | --g_dst | 目标人声特征值，bin格式 | ../models/g_dst.bin |
 | --enc_len | encoder输入长度 | 1024 |
 | --dec_len | decoder输入长度 | 128 |
+
+
+## 音色提取
+model_convert/extract_se.py用于音色提取，使用方法如下：
+```
+cd model_convert
+python extract_se.py -i 目标人声的音频文件 -o 目标人声音色特征值
+```
+示例：
+```
+python extract_se.py -i resources/example_reference.mp3 -o ref.bin
+```
+生成的bin文件用于main.py的--g_dst参数
