@@ -8,25 +8,23 @@ conda activate openvoice
 pip install -r requirements.txt
 ```
 
-## 下载预训练权重
-从[这里](https://myshell-public-repo-host.s3.amazonaws.com/openvoice/checkpoints_v2_0417.zip)下载好zip文件，解压到checkpoints_v2目录。
-
 ## 导出 ONNX 模型及量化数据集
 
 ```
 pip install git+https://github.com/myshell-ai/MeloTTS.git
-python -m unidic download
+# python -m unidic download
+wget https://myshell-public-repo-host.s3.amazonaws.com/openvoice/checkpoints_v2_0417.zip
+unzip checkpoints_v2_0417.zip
 python export_onnx.py
 ```
 
-export_onnx.py运行参数说明:  
+export_onnx.py 运行参数说明:  
 | 参数名称 | 说明 | 默认值 |
 | --- | --- | --- |
 | --encoder | 输出encoder路径 | ./encoder.onnx |
 | --decoder | 输出decoder路径 | ./decoder.onnx |
 | --enc_len | encoder输入长度 | 1024 |
 | --dec_len | decoder输入长度 | 128 |
-
 
 ## 编译模型
 
