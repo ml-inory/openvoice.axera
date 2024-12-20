@@ -1,7 +1,5 @@
 # 模型转换
 
-下载[checkpoint](https://myshell-public-repo-host.s3.amazonaws.com/openvoice/checkpoints_v2_0417.zip)，解压到 `checkpoints_v2` 目录.
-
 ## 准备环境
 
 ```
