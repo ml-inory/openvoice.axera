@@ -10,6 +10,9 @@ conda activate openvoice
 pip install -r requirements.txt
 ```
 
+## 下载预训练权重
+从[这里](https://myshell-public-repo-host.s3.amazonaws.com/openvoice/checkpoints_v2_0417.zip)下载好zip文件，解压到checkpoints_v2目录。
+
 ## 导出 ONNX 模型及量化数据集
 
 ```
