@@ -4,8 +4,6 @@ import argparse
 import os
 import soundfile as sf
 import librosa
-import torch
-from mel_processing import spectrogram_torch
 from axengine import InferenceSession
 import time
 
@@ -21,6 +19,15 @@ def get_args():
     parser.add_argument("--enc_len", type=int, required=False, default=1024, help="Encoder input length")
     parser.add_argument("--dec_len", type=int, required=False, default=128, help="Decoder input length")
     return parser.parse_args()
+
+
+def spectrogram_np(y, n_fft, sampling_rate, hop_size, win_size, center=False):
+    y = np.pad(y, int((n_fft - hop_size) / 2), mode="reflect")
+    spec = librosa.stft(y, n_fft=n_fft, hop_length=hop_size, win_length=win_size, window="hann", center=center, pad_mode="reflect")
+    mag = spec.real ** 2 + spec.imag ** 2
+    spec = np.sqrt(mag + 1e-6)
+
+    return spec[None, ...]
 
 
 def main():
@@ -61,13 +68,10 @@ def main():
     print(f"Load model take {(time.time() - start) * 1000}ms")
 
     print("Preprocessing audio...")
-    audio = torch.tensor(audio).float()
-    audio = audio.unsqueeze(0)
     start = time.time()
-    spec = spectrogram_torch(audio, filter_length,
+    spec = spectrogram_np(audio, filter_length,
                             sampling_rate, hop_length, win_length,
                             center=False)
-    spec = spec.numpy()
     real_enc_len = spec.shape[-1]
     spec = np.concatenate((spec, np.zeros((*spec.shape[:-1], int(np.ceil(spec.shape[-1] / enc_len)) * enc_len - spec.shape[-1]), dtype=np.float32)), axis=-1)
     # np.save("spec.npy", spec)

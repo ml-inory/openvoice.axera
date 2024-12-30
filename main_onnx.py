@@ -4,8 +4,6 @@ import argparse
 import os
 import soundfile as sf
 import librosa
-import torch
-from mel_processing import spectrogram_torch
 import time
 
 
@@ -18,6 +16,15 @@ def get_args():
     parser.add_argument("--g_src", type=str, required=False, default="./models/g_src.bin", help="source speaker feature")
     parser.add_argument("--g_dst", type=str, required=False, default="./models/g_dst.bin", help="target speaker feature")
     return parser.parse_args()
+
+
+def spectrogram_np(y, n_fft, sampling_rate, hop_size, win_size, center=False):
+    y = np.pad(y, int((n_fft - hop_size) / 2), mode="reflect")
+    spec = librosa.stft(y, n_fft=n_fft, hop_length=hop_size, win_length=win_size, window="hann", center=center, pad_mode="reflect")
+    mag = spec.real ** 2 + spec.imag ** 2
+    spec = np.sqrt(mag + 1e-6)
+
+    return spec[None, ...]
 
 
 def main():
@@ -60,17 +67,12 @@ def main():
     print(f"Load model take {(time.time() - start) * 1000}ms")
 
     print("Preprocessing audio...")
-    audio = torch.tensor(audio).float()
-    audio = audio.unsqueeze(0)
     start = time.time()
-    spec = spectrogram_torch(audio, filter_length,
+    spec = spectrogram_np(audio, filter_length,
                             sampling_rate, hop_length, win_length,
                             center=False)
-    spec = spec.numpy()
     real_enc_len = spec.shape[-1]
     spec = np.concatenate((spec, np.zeros((*spec.shape[:-1], int(np.ceil(spec.shape[-1] / enc_len)) * enc_len - spec.shape[-1]), dtype=np.float32)), axis=-1)
-    # np.save("spec.npy", spec)
-    # print(f"spec.size = {spec.shape}")
     print(f"Preprocess take {(time.time() - start) * 1000}ms")
 
     print("Running model...")
@@ -83,10 +85,6 @@ def main():
         z.append(outputs[0])
         print(f"Run encoder slice {i + 1}/{slice_num} take {(time.time() - start) * 1000}ms")
     z = np.concatenate(z, axis=-1)[..., :real_enc_len]
-
-    # np.save("z.npy", z)
-    # np.save("y_mask.npy", y_mask)
-    
     z = np.concatenate((z, np.zeros((*z.shape[:-1], int(np.ceil(z.shape[-1] / dec_len)) * dec_len - z.shape[-1]), dtype=np.float32)), axis=-1)
     slice_num = z.shape[-1] // dec_len
     audio_list = []
@@ -100,11 +98,6 @@ def main():
         audio_list.append(audio)
 
     audio = np.concatenate(audio_list, axis=-1)[:256 * real_enc_len]
-
-    # start = time.time()
-    # audio = sess_dec.run(None, {"z": z, "y_mask": y_mask, "g_src": g_src, "g_dst": g_dst})[0]
-    # audio = audio.flatten()
-    # print(f"Run decoder take {(time.time() - start) * 1000}ms")
 
     sf.write(output_audio, audio, sampling_rate)
     print(f"Save audio to {output_audio}")
